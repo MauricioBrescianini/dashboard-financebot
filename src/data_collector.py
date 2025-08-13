@@ -30,7 +30,7 @@ class DataCollector:
                 else:
                     raise
     
-    def load_from_database(self, table_name='vendas'):
+    def load_from_database(self, table_name='gastos'):
         """Carrega dados do PostgreSQL"""
         try:
             query = f"SELECT * FROM {table_name} ORDER BY data DESC"
@@ -41,51 +41,97 @@ class DataCollector:
             print(f"Erro ao carregar dados: {e}")
             return self.collect_sample_data()
     
-    def insert_new_sale(self, df_nova_venda, table_name='vendas'):
-        """Insere nova venda no banco de dados"""
+    def insert_new_expense(self, df_novo_gasto, table_name='gastos'):
+        """Insere novo gasto no banco de dados"""
         try:
-            # Inserir no banco
-            df_nova_venda.to_sql(
+            df_novo_gasto.to_sql(
                 table_name, 
                 self.engine, 
                 if_exists='append', 
                 index=False,
                 method='multi'
             )
-            print(f"✅ Nova venda inserida na tabela {table_name}")
+            print(f"✅ Novo gasto inserido na tabela {table_name}")
             return True
         except Exception as e:
-            print(f"❌ Erro ao inserir nova venda: {e}")
+            print(f"❌ Erro ao inserir novo gasto: {e}")
             return False
     
     def collect_sample_data(self):
         """Dados de fallback caso o banco não esteja disponível"""
-        data = {
-            'data': pd.date_range('2024-01-01', periods=100, freq='D'),
-            'vendas': [100 + i*2 + (i%7)*10 for i in range(100)],
-            'produto': ['Produto A', 'Produto B', 'Produto C'] * 34 + ['Produto A', 'Produto B'],
-            'regiao': ['Norte', 'Sul', 'Centro', 'Leste', 'Oeste'] * 20
-        }
-        return pd.DataFrame(data)
+        import random
+        from datetime import datetime, timedelta
+        
+        categorias = ['Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Roupas', 'Mensalidades']
+        formas_pagamento = ['Dinheiro', 'Cartão Crédito', 'Cartão Débito', 'PIX', 'Débito Automático']
+        
+        # Gerar dados de exemplo para os últimos 30 dias
+        data_base = datetime.now() - timedelta(days=30)
+        dados = []
+        
+        for i in range(50):
+            dados.append({
+                'data': data_base + timedelta(days=random.randint(0, 30)),
+                'valor': round(random.uniform(15.0, 300.0), 2),
+                'categoria': random.choice(categorias),
+                'descricao': f'Gasto exemplo {i+1}',
+                'forma_pagamento': random.choice(formas_pagamento)
+            })
+        
+        return pd.DataFrame(dados)
     
-    def save_to_database(self, df, table_name='vendas'):
-        """Salva dados no PostgreSQL (substitui tabela completa)"""
+    def get_monthly_summary(self, table_name='gastos'):
+        """Retorna resumo mensal dos gastos"""
         try:
-            df.to_sql(table_name, self.engine, if_exists='replace', index=False)
-            print(f"✅ Dados salvos na tabela {table_name}")
+            query = f"""
+            SELECT 
+                DATE_TRUNC('month', data) as mes,
+                categoria,
+                SUM(valor) as total_categoria,
+                COUNT(*) as quantidade,
+                AVG(valor) as media_categoria
+            FROM {table_name}
+            GROUP BY DATE_TRUNC('month', data), categoria
+            ORDER BY mes DESC, total_categoria DESC
+            """
+            df = pd.read_sql(query, self.engine)
+            return df
         except Exception as e:
-            print(f"❌ Erro ao salvar dados: {e}")
+            print(f"Erro ao obter resumo mensal: {e}")
+            return pd.DataFrame()
     
-    def get_database_stats(self, table_name='vendas'):
+    def get_category_summary(self, table_name='gastos'):
+        """Retorna resumo por categoria"""
+        try:
+            query = f"""
+            SELECT 
+                categoria,
+                SUM(valor) as total_gasto,
+                COUNT(*) as total_transacoes,
+                AVG(valor) as valor_medio,
+                MIN(valor) as menor_gasto,
+                MAX(valor) as maior_gasto
+            FROM {table_name}
+            GROUP BY categoria
+            ORDER BY total_gasto DESC
+            """
+            df = pd.read_sql(query, self.engine)
+            return df
+        except Exception as e:
+            print(f"Erro ao obter resumo por categoria: {e}")
+            return pd.DataFrame()
+    
+    def get_database_stats(self, table_name='gastos'):
         """Retorna estatísticas da base de dados"""
         try:
             query = f"""
             SELECT 
                 COUNT(*) as total_registros,
-                SUM(vendas) as total_vendas,
-                AVG(vendas) as media_vendas,
-                MIN(data) as primeira_venda,
-                MAX(data) as ultima_venda
+                SUM(valor) as total_gastos,
+                AVG(valor) as media_gastos,
+                MIN(data) as primeiro_gasto,
+                MAX(data) as ultimo_gasto,
+                COUNT(DISTINCT categoria) as total_categorias
             FROM {table_name}
             """
             stats = pd.read_sql(query, self.engine)
