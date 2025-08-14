@@ -570,5 +570,3 @@ class FinanceBot:
             error_msg = f"❌ Erro ao processar: {str(e)}"
             self.chat_history.append({"role": "assistant", "content": error_msg})
             return error_msg
-
-    # ... resto dos métodos permanecem iguais
