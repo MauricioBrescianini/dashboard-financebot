@@ -4,6 +4,7 @@ from data_collector import DataCollector
 from analyzer import DataAnalyzer
 from datetime import datetime, date
 import plotly.express as px
+import traceback # ← ADICIONAR PARA DEBUG
 
 # Configuração da página
 st.set_page_config(
@@ -11,6 +12,16 @@ st.set_page_config(
     page_icon="💰",
     layout="wide"
 )
+
+# === IMPORTAÇÃO COM TRATAMENTO DE ERRO ===
+try:
+    from chat_interface import show_chat_interface
+    CHAT_AVAILABLE = True
+    st.sidebar.success("✅ FinanceBot carregado!")
+except Exception as e:
+    CHAT_AVAILABLE = False
+    st.sidebar.error(f"❌ Erro ao carregar FinanceBot: {str(e)}")
+    st.sidebar.code(traceback.format_exc())
 
 # Inicializar data collector
 @st.cache_resource
@@ -21,10 +32,15 @@ data_collector = get_data_collector()
 
 # Sidebar para navegação
 st.sidebar.title("💰 Controle de Gastos")
-page = st.sidebar.selectbox(
-    "Escolha uma página:",
-    ["📊 Dashboard", "➕ Novo Gasto", "📋 Histórico", "📈 Relatórios"]
-)
+
+# === SIDEBAR COM VERIFICAÇÃO ===
+if CHAT_AVAILABLE:
+    opcoes = ["📊 Dashboard", "➕ Novo Gasto", "📋 Histórico", "📈 Relatórios", "🤖 FinanceBot"]
+else:
+    opcoes = ["📊 Dashboard", "➕ Novo Gasto", "📋 Histórico", "📈 Relatórios"]
+    st.sidebar.warning("⚠️ FinanceBot indisponível")
+
+page = st.sidebar.selectbox("Escolha uma página:", opcoes)
 
 # Cache para dados
 @st.cache_data
@@ -466,7 +482,7 @@ def show_relatorios():
         st.metric("🔝 Maior Gasto", f"R$ {stats.get('maior_gasto', 0):,.2f}")
         st.metric("🔻 Menor Gasto", f"R$ {stats.get('menor_gasto', 0):.2f}")
 
-# Roteamento de páginas
+# === ROTEAMENTO COMPLETO COM FINANCEBOT ===
 if page == "📊 Dashboard":
     show_dashboard()
 elif page == "➕ Novo Gasto":
@@ -475,7 +491,19 @@ elif page == "📋 Histórico":
     show_historico()
 elif page == "📈 Relatórios":
     show_relatorios()
+elif page == "🤖 FinanceBot":  # ← ESTA LINHA ESTAVA FALTANDO!
+    st.sidebar.info("🤖 Carregando FinanceBot...")
+    if CHAT_AVAILABLE:
+        try:
+            show_chat_interface()
+        except Exception as e:
+            st.error(f"❌ Erro ao executar FinanceBot: {str(e)}")
+            st.code(traceback.format_exc())
+            st.info("💡 Verifique se configurou GROQ_API_KEY no arquivo .env")
+    else:
+        st.error("❌ FinanceBot não está disponível")
+        st.info("💡 Verifique os logs de erro na sidebar")
 
 # Footer
 st.markdown("---")
-st.markdown("**💰 Controle de Gastos | Desenvolvido com ❤️ usando Streamlit + Python | Prof. Maurício Brescianini Marques**")
+st.markdown("**💰 Controle de Gastos | Desenvolvido com ❤️ usando Streamlit + Python | Maurício Brescianini Marques**")
