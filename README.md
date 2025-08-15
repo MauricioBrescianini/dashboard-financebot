@@ -5,5 +5,3 @@ parar dockers em execusao = "docker-compose down -v"
 executar docker-compose = "docker-compose up --build"
 
 acesse em = "http://localhost:8501/"
-
-a

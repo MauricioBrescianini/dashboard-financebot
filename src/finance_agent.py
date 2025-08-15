@@ -41,7 +41,7 @@ class FinanceBot:
         try:
             completion = self.client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 temperature=0.3,
                 max_tokens=max_tokens
             )
@@ -366,7 +366,7 @@ class FinanceBot:
         try:
             completion = self.client.chat.completions.create(
                 messages=[{"role": "system", "content": ai_prompt}],
-                model="llama-3.1-8b-instant",
+                model="llama-3.3-70b-versatile",
                 temperature=0.4,
                 max_tokens=400
             )
