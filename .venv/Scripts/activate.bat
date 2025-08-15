@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=c:\Users\mauri\OneDrive\Área de Trabalho\Projeto Python Oraculo\.venv
+set VIRTUAL_ENV=C:\Users\mauri\OneDrive\Área de Trabalho\dashboard-analysis\.venv
 
 if not defined PROMPT set PROMPT=$P$G
 

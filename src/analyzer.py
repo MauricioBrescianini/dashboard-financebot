@@ -127,16 +127,18 @@ class DataAnalyzer:
         return self.df.nlargest(n, 'valor')[['data', 'categoria', 'valor', 'descricao']]
     
     def get_estatisticas_basicas(self):
-        """Retorna estatísticas básicas dos gastos"""
+        """Retorna estatísticas básicas dos gastos SEM conversões float()"""
         if len(self.df) == 0:
             return {}
         
+        # Usar operações diretas do pandas sem conversões manuais
         return {
-            'total_gastos': self.df['valor'].sum(),
-            'media_gastos': self.df['valor'].mean(),
-            'mediana_gastos': self.df['valor'].median(),
-            'maior_gasto': self.df['valor'].max(),
-            'menor_gasto': self.df['valor'].min(),
-            'total_transacoes': len(self.df),
+            'total_gastos': self.df['valor'].sum(),  # Já retorna float nativo
+            'media_gastos': self.df['valor'].mean(),  # Já retorna float nativo
+            'mediana_gastos': self.df['valor'].median(),  # Já retorna float nativo
+            'maior_gasto': self.df['valor'].max(),  # Já retorna float nativo
+            'menor_gasto': self.df['valor'].min(),  # Já retorna float nativo
+            'total_transacoes': len(self.df),  # Já retorna int
             'categoria_mais_gasta': self.gastos_por_categoria().idxmax() if not self.gastos_por_categoria().empty else 'N/A'
         }
+

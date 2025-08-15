@@ -8,8 +8,13 @@ services:
       - "8501:8501"
     volumes:
       - ./src:/app/src
+      - ./.env:/app/.env
     environment:
       - DATABASE_URL=postgresql://admin:admin@postgres:5432/analytics
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - AGENT_MODEL=groq
+      - AGENT_TEMPERATURE=0.3
+      - AGENT_MAX_TOKENS=1000
     depends_on:
       postgres:
         condition: service_healthy

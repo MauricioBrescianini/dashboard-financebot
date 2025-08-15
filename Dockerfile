@@ -1,17 +1,20 @@
-FROM python:3.12.6
+FROM python:3.11.9
 
 ENV PYTHONUNBUFFERED=1
-
+ENV TZ=America/Sao_Paulo
 WORKDIR /app
 
-# Copiar e instalar requirements
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar dependências Python
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Criar diretórios
-RUN mkdir -p /app/src /app/data
-
-# Copiar arquivos
+# Copiar código da aplicação
 COPY src/ ./src/
 
 # Expor porta
