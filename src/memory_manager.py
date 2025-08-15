@@ -39,7 +39,6 @@ class FinanceBotMemory:
             'media_mensal': self._get_monthly_average(df),
             'categoria_favorita': stats.get('categoria_mais_gasta', 'N/A'),
             'forma_pagamento_preferida': self._get_preferred_payment(df),
-            'horario_mais_gasta': self._get_spending_time_pattern(df),
             'tendencia_gastos': self._get_spending_trend(df),
             'alertas_ativos': self._generate_spending_alerts(df, stats),
             'recomendacoes': self._generate_recommendations(df, stats)
@@ -49,7 +48,6 @@ class FinanceBotMemory:
         self.insights_cache = {
             'gastos_por_categoria': analyzer.gastos_por_categoria().to_dict(),
             'gastos_recorrentes': self._identify_recurring_expenses(df),
-            'sazonalidade': self._analyze_seasonality(df),
             'metas_sugeridas': self._suggest_budget_goals(stats)
         }
     
@@ -69,15 +67,6 @@ class FinanceBotMemory:
         except:
             pass
         return "N/A"
-    
-    def _get_spending_time_pattern(self, df: pd.DataFrame) -> str:
-        """Analisa padrões temporais de gastos"""
-        try:
-            df['dia_semana'] = df['data'].dt.day_name()
-            most_active_day = df['dia_semana'].mode().iloc[0]
-            return f"Mais ativo nas {most_active_day}s"
-        except:
-            return "Padrão indefinido"
     
     def _get_spending_trend(self, df: pd.DataFrame) -> str:
         """Analisa tendência de gastos (crescente/decrescente)"""
@@ -110,11 +99,6 @@ class FinanceBotMemory:
                 categoria_dominante = categoria_gastos.idxmax()
                 alerts.append(f"📊 Gastos concentrados em {categoria_dominante} ({max_categoria/total*100:.1f}%)")
         
-        # Alert de tendência crescente
-        trend = self.user_profile.get('tendencia_gastos', '')
-        if trend == "Crescente":
-            alerts.append("📈 Gastos em tendência crescente nos últimos meses")
-        
         return alerts
     
     def _generate_recommendations(self, df: pd.DataFrame, stats: Dict) -> List[str]:
@@ -133,22 +117,14 @@ class FinanceBotMemory:
             recommendations.append("🚗 Considere alternativas de transporte mais econômicas")
             recommendations.append("⛽ Monitore o consumo de combustível")
         
-        # Recomendações baseadas na média de gastos
-        media_mensal = self.user_profile.get('media_mensal', 0)
-        if media_mensal > 0:
-            meta_economia = media_mensal * 0.1  # 10% de economia
-            recommendations.append(f"💰 Meta sugerida: economizar R$ {meta_economia:.2f}/mês")
-        
         return recommendations
     
     def _identify_recurring_expenses(self, df: pd.DataFrame) -> List[Dict]:
         """Identifica gastos recorrentes"""
         try:
-            # Agrupa por descrição similar e valor similar
             recurring = []
             for categoria in df['categoria'].unique():
                 cat_df = df[df['categoria'] == categoria]
-                # Identifica valores que se repetem
                 value_counts = cat_df['valor'].value_counts()
                 frequent_values = value_counts[value_counts >= 2]
                 
@@ -164,25 +140,6 @@ class FinanceBotMemory:
             return sorted(recurring, key=lambda x: x['frequencia'], reverse=True)[:5]
         except:
             return []
-    
-    def _analyze_seasonality(self, df: pd.DataFrame) -> Dict:
-        """Analisa sazonalidade dos gastos"""
-        try:
-            monthly_spending = df.groupby(df['data'].dt.month)['valor'].sum()
-            max_month = monthly_spending.idxmax()
-            min_month = monthly_spending.idxmin()
-            
-            months = {1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril',
-                     5: 'Maio', 6: 'Junho', 7: 'Julho', 8: 'Agosto',
-                     9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'}
-            
-            return {
-                'mes_maior_gasto': months.get(max_month, 'N/A'),
-                'mes_menor_gasto': months.get(min_month, 'N/A'),
-                'diferenca_percentual': ((monthly_spending.max() - monthly_spending.min()) / monthly_spending.mean() * 100)
-            }
-        except:
-            return {}
     
     def _suggest_budget_goals(self, stats: Dict) -> Dict:
         """Sugere metas de orçamento"""
@@ -240,8 +197,6 @@ class FinanceBotMemory:
             return self._get_saving_advice()
         elif 'orçamento' in message_lower:
             return self._get_budget_advice()
-        elif 'categoria' in message_lower:
-            return self._get_category_advice()
         
         return ""
     
@@ -270,26 +225,11 @@ class FinanceBotMemory:
     
     def _get_budget_advice(self) -> str:
         """Conselhos de orçamento personalizados"""
-        metas = self.insights_cache.get('metas_sugeridas', {})
-        
         advice = "📋 ORÇAMENTO PERSONALIZADO:\n\n"
         advice += "Baseado no seu perfil, sugiro:\n"
         
         for categoria, valor in self.insights_cache.get('gastos_por_categoria', {}).items():
             percentual = (valor / self.user_profile.get('total_gastos', 1)) * 100
             advice += f"• {categoria}: R$ {valor:,.2f} ({percentual:.1f}%)\n"
-        
-        return advice
-    
-    def _get_category_advice(self) -> str:
-        """Conselhos sobre categorias de gastos"""
-        gastos_cat = self.insights_cache.get('gastos_por_categoria', {})
-        
-        advice = "📊 ANÁLISE POR CATEGORIA:\n\n"
-        
-        sorted_categories = sorted(gastos_cat.items(), key=lambda x: x[1], reverse=True)
-        for i, (categoria, valor) in enumerate(sorted_categories[:3]):
-            percentual = (valor / self.user_profile.get('total_gastos', 1)) * 100
-            advice += f"{i+1}. {categoria}: R$ {valor:,.2f} ({percentual:.1f}%)\n"
         
         return advice
